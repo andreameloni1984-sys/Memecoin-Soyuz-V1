@@ -1,0 +1,1 @@
+"""Memecoin Soyuz V1."""
