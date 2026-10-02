@@ -64,6 +64,14 @@ def _num(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _boolish(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class GMGNCLI:
     def __init__(self) -> None:
         if shutil.which("gmgn-cli") is None:
@@ -99,7 +107,12 @@ class GMGNCLI:
         return _token(self.run("token", "info", "--chain", "sol", "--address", address))
 
     def token_security(self, address: str) -> dict[str, Any]:
-        return _token(self.run("token", "security", "--chain", "sol", "--address", address))
+        payload = _unwrap(self.run("token", "security", "--chain", "sol", "--address", address))
+        if isinstance(payload, dict):
+            if "security" in payload and isinstance(payload["security"], dict):
+                return payload["security"]
+            return payload
+        raise RuntimeError("GMGN security response did not contain an object.")
 
     def holdings(self) -> list[dict[str, Any]]:
         return _records(self.run(
@@ -163,8 +176,8 @@ def snapshot_from_gmgn(info: dict[str, Any], security: dict[str, Any]) -> TokenS
         dev_pct=dev_pct * 100,
         insider_pct=insider * 100,
         bundle_pct=bundle * 100,
-        mint_authority_active=not bool(security.get("renounced_mint", True)),
-        freeze_authority_active=not bool(security.get("renounced_freeze_account", True)),
+        mint_authority_active=not _boolish(security.get("renounced_mint"), False),
+        freeze_authority_active=not _boolish(security.get("renounced_freeze_account"), False),
         honeypot=str(security.get("is_honeypot", "")).lower() == "yes",
         smart_money_buys=smart_wallets if _num(price.get("buy_volume_5m")) >= _num(price.get("sell_volume_5m")) else 0,
         smart_money_sells=smart_wallets if _num(price.get("sell_volume_5m")) > _num(price.get("buy_volume_5m")) else 0,
@@ -221,6 +234,24 @@ def run_live_cycle() -> int:
             security = cli.token_security(address)
             snap = snapshot_from_gmgn(info, security)
             smart = int(_num((info.get("wallet_tags_stat") or {}).get("smart_wallets")))
+            rug = _num(security.get("rug_ratio"))
+            top10 = _num(security.get("top_10_holder_rate"))
+            creator_status = str(security.get("creator_token_status") or "").lower()
+            mint_ok = _boolish(security.get("renounced_mint"), False)
+            freeze_ok = _boolish(security.get("renounced_freeze_account"), False)
+            open_source = str(security.get("open_source") or "").lower()
+            owner_renounced = str(security.get("owner_renounced") or "").lower()
+            hard_stop = (
+                rug > 0.30
+                or top10 > 0.50
+                or creator_status == "creator_hold"
+                or not mint_ok
+                or not freeze_ok
+                or open_source == "no"
+                or owner_renounced == "no"
+            )
+            if hard_stop:
+                continue
             if snap.liquidity_usd < MIN_LIQUIDITY_USD or smart < MIN_SMART_WALLETS:
                 continue
             signal = build_signal(snap, paper_entry_usd=0)
