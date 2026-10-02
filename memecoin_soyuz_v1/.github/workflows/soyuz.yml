@@ -1,0 +1,55 @@
+name: Memecoin Soyuz
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      token_list:
+        description: "Comma-separated Solana token addresses"
+        required: false
+        default: ""
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: memecoin_soyuz_v1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest -q
+
+  paper-scan:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.token_list != '' }}
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: memecoin_soyuz_v1
+    env:
+      PAPER_ONLY: "1"
+      ENTRY_USD: "25"
+      SCAN_INTERVAL_SECONDS: "300"
+      TOKEN_LIST: ${{ inputs.token_list }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run paper scan
+        run: python -m soyuz.main
