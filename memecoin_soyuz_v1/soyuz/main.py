@@ -1,5 +1,5 @@
 from .config import ENTRY_USD, TOKEN_LIST
-from .gmgn import GMGNReadOnlyClient
+from .gmgn import DexScreenerReadOnlySource, GMGNReadOnlyClient
 from .scoring import build_signal
 from .telegram import format_signal_message, send_message
 
@@ -20,7 +20,7 @@ def run_once() -> int:
         print("Add one or more Solana token addresses to .env.")
         return 0
 
-    client = GMGNReadOnlyClient(source=__import__("soyuz.gmgn", fromlist=["DexScreenerReadOnlySource"]).DexScreenerReadOnlySource())
+    client = GMGNReadOnlyClient(source=DexScreenerReadOnlySource())
 
     processed = 0
 
