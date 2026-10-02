@@ -1,0 +1,25 @@
+name: Memecoin Soyuz Tests
+
+on:
+  push:
+    paths:
+      - "memecoin_soyuz_v1/**"
+  pull_request:
+    paths:
+      - "memecoin_soyuz_v1/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: memecoin_soyuz_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: pytest -q
