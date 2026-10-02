@@ -20,7 +20,7 @@ def run_once() -> int:
         print("Add one or more Solana token addresses to .env.")
         return 0
 
-    client = GMGNReadOnlyClient()
+    client = GMGNReadOnlyClient(source=__import__("soyuz.gmgn", fromlist=["DexScreenerReadOnlySource"]).DexScreenerReadOnlySource())
 
     processed = 0
 
