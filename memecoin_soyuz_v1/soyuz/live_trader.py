@@ -96,6 +96,49 @@ class GMGNCLI:
         except json.JSONDecodeError as exc:
             raise RuntimeError("gmgn-cli did not return valid JSON.") from exc
 
+    def preflight(self) -> None:
+        result = subprocess.run(
+            ["gmgn-cli", "config", "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=os.environ.copy(),
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            raise RuntimeError(
+                "GMGN credentials are not configured/valid. "
+                "Run gmgn-cli config --check and configure GMGN_API_KEY "
+                "(and GMGN_PRIVATE_KEY for trading). "
+                f"Details: {detail[-800:]}"
+            )
+
+    def order_status(self, order_id: str) -> dict[str, Any]:
+        payload = self.run("order", "get", "--chain", "sol", "--order-id", order_id)
+        value = _unwrap(payload)
+        return value if isinstance(value, dict) else {"raw": value}
+
+    def _require_confirmed(self, response: Any) -> Any:
+        data = _unwrap(response)
+        if not isinstance(data, dict):
+            raise RuntimeError("GMGN swap returned an unexpected response.")
+        order_id = str(data.get("order_id") or "").strip()
+        if not order_id:
+            return data
+        status = self.order_status(order_id)
+        confirmation = status.get("confirmation")
+        confirmation = confirmation if isinstance(confirmation, dict) else {}
+        state = str(
+            status.get("status")
+            or status.get("state")
+            or confirmation.get("state")
+            or ""
+        ).lower()
+        if state not in {"confirmed", "successful", "success"}:
+            raise RuntimeError(f"GMGN order {order_id} not confirmed: {status}")
+        return status
+
     def trending(self) -> list[dict[str, Any]]:
         return _records(self.run(
             "market", "trending", "--chain", "sol", "--interval", "5m",
@@ -126,21 +169,23 @@ class GMGNCLI:
             {"order_type": "loss_stop", "side": "sell",
              "price_scale": str(STOP_LOSS_PCT), "sell_ratio": "100"},
         ], separators=(",", ":"))
-        return self.run(
-            "cooking", "--chain", "sol", "--from", GMGN_WALLET_ADDRESS,
+        response = self.run(
+            "swap", "--chain", "sol", "--from", GMGN_WALLET_ADDRESS,
             "--input-token", SOL_MINT, "--output-token", address,
             "--amount", str(int(ENTRY_SOL * 1_000_000_000)),
             "--auto-slippage", "--anti-mev",
             "--condition-orders", conditions, "--sell-ratio-type", "hold_amount",
             "--yes",
         )
+        return self._require_confirmed(response)
 
     def sell_all(self, address: str) -> Any:
-        return self.run(
+        response = self.run(
             "swap", "--chain", "sol", "--from", GMGN_WALLET_ADDRESS,
             "--input-token", address, "--output-token", SOL_MINT,
             "--percent", "100", "--auto-slippage", "--anti-mev", "--yes",
         )
+        return self._require_confirmed(response)
 
 
 def snapshot_from_gmgn(info: dict[str, Any], security: dict[str, Any]) -> TokenSnapshot:
@@ -197,6 +242,7 @@ def run_live_cycle() -> int:
 
     os.environ["GMGN_ALLOW_AUTOMATED_TRADES"] = "1"
     cli = GMGNCLI()
+    cli.preflight()
     holdings = cli.holdings()
     held = {
         str(h.get("address") or h.get("token_address") or "").strip()
