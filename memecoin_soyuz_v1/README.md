@@ -1,53 +1,39 @@
-# MEMECOIN SOYUZ V1 — PAPER ONLY
+# MEMECOIN SOYUZ V1 — GMGN LIVE TRADER
 
-V1 is deliberately non-custodial and paper-only.
+Soyuz has paper mode by default and a separate live GMGN execution mode.
 
-The bot evaluates Solana memecoin data, applies safety filters, calculates opportunity and execution scores, and generates paper-trading signals.
+## Live flow
 
-## Architecture
+GMGN trending -> token info/security -> Soyuz scoring -> BUY -> GMGN Cooking -> TP/SL -> position monitoring -> SELL
 
-GMGN
-↓
-Token data
-↓
-Security filter
-↓
-Momentum
-↓
-Smart Money
-↓
-Social / Narrative
-↓
-Scoring
-↓
-Entry / Exit
-↓
-Paper Trading
-↓
-Telegram
+The official GMGN CLI supports market discovery, token/security data, swaps, percentage sells and strategy orders. Automated non-interactive trades require GMGN_ALLOW_AUTOMATED_TRADES=1 and --yes. Soyuz enables that only inside the live process.
 
-## IMPORTANT
+## Safety
 
-This version does NOT execute real trades.
+Live mode can submit irreversible on-chain transactions. Keep LIVE_TRADING_ENABLED=0 until credentials and limits are configured. Never commit GMGN_API_KEY or GMGN_PRIVATE_KEY. GMGN documents GMGN_PRIVATE_KEY as an API request-signing key, not the blockchain wallet private key.
 
-No private wallet key is required.
+## Live variables
 
-No automatic purchase is performed.
+PAPER_ONLY=0
+LIVE_TRADING_ENABLED=1
+GMGN_API_KEY=...
+GMGN_PRIVATE_KEY=...
+GMGN_WALLET_ADDRESS=...
+ENTRY_SOL=0.01
+MAX_OPEN_POSITIONS=3
+TRENDING_LIMIT=20
+MIN_LIQUIDITY_USD=20000
+MIN_SMART_WALLETS=1
+TAKE_PROFIT_PCT=30
+STOP_LOSS_PCT=15
+SCAN_INTERVAL_SECONDS=300
 
-## Initial decision rules
+Install the official CLI with:
 
-- Honeypot → SKIP
-- Safety Score < 60 → SKIP
-- Execution Score < 50 → SKIP
-- Total Score >= 72 → BUY_PAPER
-- Total Score 60–71.99 → WATCH
-- Total Score < 60 → SKIP
+npm install -g gmgn-cli
 
-These thresholds are experimental parameters and do not guarantee profitability.
+Then run from memecoin_soyuz_v1:
 
-## Testing
+python -m soyuz.main
 
-Run:
-
-```bash
-pytest -q
+With LIVE_TRADING_ENABLED=0 it stays paper-only. With live mode enabled, the bot chooses candidates and can submit buys/sells through GMGN.
