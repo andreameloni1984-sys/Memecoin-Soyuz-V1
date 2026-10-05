@@ -300,6 +300,6 @@ def build_signal(
         reasons=reasons,
         paper_entry_usd=paper_entry_usd,
         entry_price_usd=token.price_usd,
-        take_profit_price_usd=token.price_usd * 1.30,
-        stop_loss_price_usd=token.price_usd * 0.85,
+        take_profit_price_usd=token.price_usd * (1.0 + take_profit_pct / 100.0),
+        stop_loss_price_usd=token.price_usd * (1.0 - stop_loss_pct / 100.0),
     )
