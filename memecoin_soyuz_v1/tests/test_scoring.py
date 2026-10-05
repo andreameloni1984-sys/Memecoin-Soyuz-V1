@@ -6,6 +6,7 @@ def make_safe_token() -> TokenSnapshot:
     return TokenSnapshot(
         address="TEST_TOKEN",
         symbol="TEST",
+        price_usd=0.001,
         liquidity_usd=150_000,
         market_cap_usd=1_000_000,
         volume_5m_usd=150_000,
