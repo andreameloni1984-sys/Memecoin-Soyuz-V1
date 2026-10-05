@@ -49,32 +49,40 @@ def send_message(text: str) -> bool:
 
 
 def format_signal_message(signal) -> str:
-    """Format a Soyuz signal for Telegram."""
-
+    """Format only the selected Soyuz candidate for Telegram."""
     lines = [
-        "🚀 MEMECOIN SOYUZ",
+        "🚀 SOYUZ — PAPER DECISION",
         "",
         f"🪙 {signal.symbol}",
-        f"📊 Decision: {signal.decision}",
+        f"📍 {signal.address}",
+        "🟢 ACTION: PAPER BUY",
         "",
+        "💵 Paper capital: $" + f"{signal.paper_entry_usd:.2f}",
+        "🎯 Entry: $" + f"{signal.entry_price_usd:.10f}",
+        "🟢 TP: $" + f"{signal.take_profit_price_usd:.10f}",
+        "🔴 SL: $" + f"{signal.stop_loss_price_usd:.10f}",
+        "",
+        f"⭐ Total: {signal.total_score:.2f}",
         f"🛡 Safety: {signal.safety_score:.2f}",
         f"🔥 Opportunity: {signal.opportunity_score:.2f}",
         f"⚡ Execution: {signal.execution_score:.2f}",
-        f"🎯 Total: {signal.total_score:.2f}",
         "",
-        "📋 Reasons:",
+        "Why Soyuz selected it:",
     ]
-
     for reason in signal.reasons[:8]:
         lines.append(f"• {reason}")
+    lines.extend(["", "🧪 PAPER ONLY — NO REAL TRADE"])
+    return "\n".join(lines)
 
-    if signal.decision == "BUY_PAPER":
-        lines.extend(
-            [
-                "",
-                f"💵 Paper entry: ${signal.paper_entry_usd:.2f}",
-                "🧪 PAPER ONLY — NO REAL TRADE",
-            ]
-        )
 
+def format_no_trade_message(reason: str = "") -> str:
+    lines = [
+        "🚀 SOYUZ — NO TRADE",
+        "",
+        "⛔ NESSUN ACQUISTO",
+        "Nessuna memecoin ha superato tutti i filtri BUY_PAPER.",
+    ]
+    if reason:
+        lines.extend(["", f"ℹ️ {reason}"])
+    lines.extend(["", "🧪 PAPER ONLY — NO REAL TRADE"])
     return "\n".join(lines)
