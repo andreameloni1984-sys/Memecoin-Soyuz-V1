@@ -12,6 +12,37 @@ class DexScreenerReadOnlySource:
     """Public read-only market-data adapter used by Soyuz paper mode."""
 
     BASE_URL = "https://api.dexscreener.com/latest/dex/tokens/"
+    PROFILES_URL = "https://api.dexscreener.com/token-profiles/latest/v1"
+
+    def discover_tokens(self, limit: int = 20) -> list[str]:
+        """Discover recent Solana token addresses using a read-only public feed."""
+        request = urllib.request.Request(
+            self.PROFILES_URL,
+            headers={"User-Agent": "Memecoin-Soyuz-V1/1.0"},
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                if response.status != 200:
+                    raise RuntimeError("DexScreener HTTP " + str(response.status))
+                payload = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+            raise RuntimeError("DexScreener discovery failed: " + str(exc)) from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("DexScreener discovery returned invalid JSON.") from exc
+
+        result = []
+        seen = set()
+        for item in payload if isinstance(payload, list) else []:
+            if item.get("chainId") != "solana":
+                continue
+            address = str(item.get("tokenAddress") or "").strip()
+            if address and address not in seen:
+                seen.add(address)
+                result.append(address)
+            if len(result) >= max(1, limit):
+                break
+        return result
 
     def get_token(self, address: str) -> dict[str, Any]:
         address = address.strip()
