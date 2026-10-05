@@ -272,6 +272,14 @@ def build_signal(
         decision = "SKIP"
         reasons.insert(0, "HARD GATE: execution score below 50")
 
+    elif token.price_usd <= 0:
+        decision = "SKIP"
+        reasons.insert(0, "HARD GATE: invalid entry price")
+
+    elif token.liquidity_usd <= 0 or token.volume_5m_usd <= 0:
+        decision = "SKIP"
+        reasons.insert(0, "HARD GATE: insufficient market data")
+
     elif total_score >= 72:
         decision = "BUY_PAPER"
 
@@ -291,4 +299,7 @@ def build_signal(
         total_score=round(total_score, 2),
         reasons=reasons,
         paper_entry_usd=paper_entry_usd,
+        entry_price_usd=token.price_usd,
+        take_profit_price_usd=token.price_usd * 1.30,
+        stop_loss_price_usd=token.price_usd * 0.85,
     )
