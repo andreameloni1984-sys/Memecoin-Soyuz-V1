@@ -1,6 +1,6 @@
 import time
 
-from .config import ENTRY_USD, LIVE_TRADING_ENABLED, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TOKEN_LIST
+from .config import ENTRY_USD, LIVE_TRADING_ENABLED, STOP_LOSS_PCT, TAKE_PROFIT_PCT, TOKEN_LIST, TRENDING_LIMIT
 from .live_trader import run_live_cycle
 from .gmgn import DexScreenerReadOnlySource, GMGNReadOnlyClient
 from .scoring import build_signal
@@ -17,12 +17,24 @@ def select_best_signal(signals):
 def run_paper_once() -> int:
     print("MEMECOIN SOYUZ V1")
     print("PAPER ONLY")
-    if not TOKEN_LIST:
-        print("TOKEN_LIST is empty.")
-        return 0
     client = GMGNReadOnlyClient(source=DexScreenerReadOnlySource())
+    addresses = list(TOKEN_LIST)
+    if not addresses:
+        try:
+            addresses = client.source.discover_tokens(TRENDING_LIMIT)
+            print("Auto-discovered " + str(len(addresses)) + " Solana candidates.")
+        except Exception as exc:
+            message = format_no_trade_message("Automatic discovery failed: " + str(exc))
+            print(message)
+            send_message(message)
+            return 0
+    if not addresses:
+        message = format_no_trade_message("No Solana candidates discovered.")
+        print(message)
+        send_message(message)
+        return 0
     signals = []
-    for address in TOKEN_LIST:
+    for address in addresses:
         try:
             snapshot = client.get_token_snapshot(address.strip())
             signal = build_signal(snapshot, paper_entry_usd=ENTRY_USD,
