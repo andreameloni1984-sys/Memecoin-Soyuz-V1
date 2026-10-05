@@ -230,6 +230,8 @@ def calculate_execution_score(token: TokenSnapshot) -> tuple[float, list[str]]:
 def build_signal(
     token: TokenSnapshot,
     paper_entry_usd: float = 25.0,
+    take_profit_pct: float = 30.0,
+    stop_loss_pct: float = 15.0,
 ) -> Signal:
     """
     Build the final Soyuz decision.
