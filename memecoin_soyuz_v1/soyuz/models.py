@@ -87,6 +87,9 @@ class Signal:
 
     # Paper-trading information only.
     paper_entry_usd: float = 0.0
+    entry_price_usd: float = 0.0
+    take_profit_price_usd: float = 0.0
+    stop_loss_price_usd: float = 0.0
 
     def to_dict(self) -> dict:
         """Convert the signal to a normal dictionary."""
